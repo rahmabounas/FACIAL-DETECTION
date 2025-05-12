@@ -3,6 +3,11 @@ import cv2
 from PIL import Image
 import numpy as np
 import io
+import time
+from streamlit.runtime.scriptrunner import RerunException
+from streamlit.runtime.state import get_session_state
+def rerun():
+    raise RerunException(get_session_state())
 
 # Page configuration
 st.set_page_config(page_title="Face Detector", page_icon="🧠", layout="centered")
@@ -15,6 +20,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 
 tab1, tab2 = st.tabs(["📁 Upload Image", "📷 Webcam Detection"])
 
+# ---------------------- Tab 1: Upload Image ----------------------
 with tab1:
     st.markdown("### Detect faces in an uploaded image")
 
@@ -32,7 +38,7 @@ with tab1:
     if uploaded_file:
         image = Image.open(uploaded_file).convert('RGB')
         img_array = np.array(image)
-        st.image(image, caption="📷 Original Image", use_column_width=True)
+        st.image(image, caption="📷 Original Image", use_container_width=True)
 
         rectangle_color = st.color_picker("🎨 Choose rectangle color", "#00FF00")
         b, g, r = tuple(int(rectangle_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
@@ -47,7 +53,7 @@ with tab1:
             for (x, y, w, h) in faces:
                 cv2.rectangle(img_array, (x, y), (x+w, y+h), (b, g, r), 2)
 
-            st.image(img_array, caption=f"🔎 {len(faces)} face(s) detected", use_column_width=True)
+            st.image(img_array, caption=f"🔎 {len(faces)} face(s) detected", use_container_width=True)
 
             result_img = Image.fromarray(img_array)
             buf = io.BytesIO()
@@ -56,57 +62,63 @@ with tab1:
 
             st.download_button("💾 Download Image", data=byte_im, file_name="detected_faces.png", mime="image/png")
 
+# ---------------------- Tab 2: Webcam Detection ----------------------
 with tab2:
     st.markdown("### Detect faces using your webcam")
 
-    cam_option = st.selectbox("📷 Choose Camera", options=["Front Camera (0)", "Back Camera (1)"])
-    camera_index = 1 if "Back" in cam_option else 0
+    cam_option = st.selectbox("📷 Choose Camera", options=["Back Camera (1)", "Front Camera (0)"])
+    camera_index = 1 if "Front" in cam_option else 0
 
-    rectangle_color_web = st.color_picker("🎨 Rectangle Color (Webcam)", "#00FF00")
-    b_web, g_web, r_web = tuple(int(rectangle_color_web.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    if "camera_active" not in st.session_state:
+        st.session_state.camera_active = False
+    if "captured_frame" not in st.session_state:
+        st.session_state.captured_frame = None
 
-    scale_factor_web = st.slider("🔍 Scale Factor (Webcam)", min_value=1.05, max_value=2.5, value=1.1, step=0.05)
-    min_neighbors_web = st.slider("👥 Min Neighbors (Webcam)", min_value=1, max_value=10, value=5)
+    start = st.button("🎥 Start Camera")
+    stop = st.button("🛑 Stop Camera")
 
-    start_cam = st.button("🎥 Start Camera")
+    if start:
+        st.session_state.camera_active = True
+        st.session_state.captured_frame = None
+    if stop:
+        st.session_state.camera_active = False
 
-    if start_cam:
+    frame_placeholder = st.empty()
+    capture_placeholder = st.empty()
+
+    if st.session_state.camera_active:
         cap = cv2.VideoCapture(camera_index)
         if not cap.isOpened():
             st.warning("❗ Couldn't access selected camera. Falling back to front camera.")
             cap = cv2.VideoCapture(0)
 
-        frame_placeholder = st.empty()
-        capture_btn = st.button("📸 Capture Photo")
-
-        captured = False
-        captured_frame = None
-
-        while cap.isOpened() and not captured:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("Failed to grab frame")
-                break
-
+        ret, frame = cap.read()
+        if ret:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=scale_factor_web, minNeighbors=min_neighbors_web)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
             for (x, y, w, h) in faces:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (b_web, g_web, r_web), 2)
-
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_placeholder.image(frame_rgb, channels="RGB")
 
-            if capture_btn:
-                captured_frame = frame_rgb.copy()
-                captured = True
-                break
-
+            # Save frame for capture
+            st.session_state.last_frame = frame_rgb
         cap.release()
 
-        if captured_frame is not None:
-            st.image(captured_frame, caption="📸 Captured Photo with Detected Faces", use_column_width=True)
-            result_img = Image.fromarray(captured_frame)
-            buf = io.BytesIO()
-            result_img.save(buf, format="PNG")
-            byte_im = buf.getvalue()
-            st.download_button("💾 Download Captured Image", data=byte_im, file_name="captured_faces.png", mime="image/png")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📸 Capture Photo"):
+                st.session_state.captured_frame = st.session_state.last_frame
+
+        with col2:
+            if st.button("🔄 Refresh"):
+                time.sleep(0.1)
+                rerun()
+
+    if st.session_state.captured_frame is not None:
+        capture_placeholder.image(st.session_state.captured_frame, caption="📸 Captured Photo", use_container_width=True)
+        result_img = Image.fromarray(st.session_state.captured_frame)
+        buf = io.BytesIO()
+        result_img.save(buf, format="PNG")
+        byte_im = buf.getvalue()
+        st.download_button("💾 Download Captured Image", data=byte_im, file_name="captured_faces.png", mime="image/png")
