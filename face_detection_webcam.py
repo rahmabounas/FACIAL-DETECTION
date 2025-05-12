@@ -1,10 +1,10 @@
 import cv2
 import streamlit as st
 
-face_cascade = cv2.CascadeClassifier('C:\Users\pc\Desktop\ALL GOMYCODE PROJECTS\FACIAL-DETECTION\haarcascade_frontalface_default.xml')
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default .xml')
 
 def detect_faces():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     while True:
         ret, frame = cap.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
