@@ -31,3 +31,52 @@ A simple, interactive face detection web app built with **Streamlit** and **Open
    ```bash
    git clone https://github.com/yourusername/face-detection-app.git
    cd face-detection-app
+
+2. **Run the app**
+   ```bash
+   streamlit run app.py
+
+## 🖼️ Screenshot
+
+![Screenshot](screenshot.png)
+
+---
+
+## 📌 How to Use
+
+1. **Launch the app locally** with `streamlit run app.py`.
+2. **Upload an image** containing one or more faces.
+3. **Pick the rectangle color** using the color picker.
+4. **Adjust detection settings** using sliders:
+   - **`scaleFactor`**: controls scale step for detection.
+   - **`minNeighbors`**: sets the strictness of detection.
+5. **Click "Detect Faces"** to see the result.
+6. **Click "Download Image"** to save the output.
+
+---
+
+## ✅ Example Use Cases
+
+- **Quick face detection** for photos.
+- **Exploring classical CV algorithms**.
+- **Prototype for more advanced detection systems**.
+- **Educational or demonstration purposes**.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 🌐 Website
+
+You can access the live web app here: [Your Web App Website](https://yourwebsite.com)
+
+---
+
+## 🧑‍💻 Author
+
+**Rahma** – Data Science Student  
+📫 Reach out via issues or discussions for questions or suggestions.
